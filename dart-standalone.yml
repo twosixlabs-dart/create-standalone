@@ -524,11 +524,11 @@ services:
       - dart
 
   hume-reader:
-    image: clulab/eidos-dart:latest
-    container_name: eidos
-    hostname: eidos
+    image: wmbbn/hume:R2022_03_21
+    container_name: hume-reader
+    hostname: hume-reader
     volumes:
-      - ./data/eidos:/opt/app/data
+      - ./hume-reader-config.json:/extra/config.json
     networks:
       - dart
 #  indra:
