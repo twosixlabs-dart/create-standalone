@@ -318,6 +318,7 @@ services:
     hostname: dart-ui
     labels:
       - "traefik.enable=true"
+      - "traefik.http.services.ui-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.dart-ui.rule=Host(`${PROXY_HOSTNAME:-localhost}`)"
       - "traefik.http.routers.dart-ui.priority=90"
     environment:
