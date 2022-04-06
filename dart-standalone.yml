@@ -526,7 +526,6 @@ services:
       ONTOLOGY_VERSION: 2.3
     volumes:
       - ./data/eidos:/opt/app/data
-      - ./start-loop-all2.sh:/eidos/start-loop-all2.sh
     networks:
       - dart
 
