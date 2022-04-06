@@ -519,7 +519,6 @@ services:
       ONTOLOGY_VERSION: 2.3
     volumes:
       - ./data/eidos:/opt/app/data
-      - ./start-loop-all2.sh:/eidos/start-loop-all2.sh
     networks:
       - dart
 
@@ -529,6 +528,7 @@ services:
     hostname: hume-reader
     volumes:
       - ./hume-reader-config.json:/extra/config.json
+    entrypoint: ["/usr/local/envs/py3-jni/bin/python3", "/wm_rootfs/git/Hume/src/python/dart_integration/streaming_processing.py"]
     networks:
       - dart
 #  indra:
