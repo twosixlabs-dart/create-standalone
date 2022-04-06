@@ -228,7 +228,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.services.corpex-service.loadbalancer.server.port=8088"
       - "traefik.http.routers.corpex.priority=100"
-      - "traefik.http.routers.corpex.rule=PathPrefix(`/dart/api/v1/corpex/`)"
+      - "traefik.http.routers.corpex.rule=PathPrefix(`/dart/api/v1/corpex`)"
     environment:
       DART_AUTH_BYPASS: "true"
       ELASTICSEARCH_HOST: dart-es-master
@@ -246,6 +246,7 @@ services:
       ARANGODB_HOST: dart-arangodb
     labels:
       - "traefik.enable=true"
+      - "traefik.http.services.cdrs-service.loadbalancer.server.port=8090"
       - "traefik.http.routers.cdr-retrieval.rule=PathPrefix(`/dart/api/v1/cdrs`)"
       - "traefik.http.routers.cdr-retrieval.priority=${CDR_RETRIEVAL_PRIORITY:-100}"
     networks:
@@ -273,6 +274,7 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
+      - "traefik.http.services.readers-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.readers-output.rule=PathPrefix(`/dart/api/v1/readers`)"
       - "traefik.http.routers.readers-output.priority=${READERS_OUTPUT_PRIORITY:-100}"
     volumes:
@@ -302,7 +304,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.forklift-service.loadbalancer.server.port=8091"
-      - "traefik.http.routers.forklift.rule=PathPrefix(`/dart/api/v1/forklift/`) || PathPrefix(`/dart/api/v1/status`)"
+      - "traefik.http.routers.forklift.rule=PathPrefix(`/dart/api/v1/forklift`) || PathPrefix(`/dart/api/v1/status`)"
       - "traefik.http.routers.forklift.priority=100"
     volumes:
       - ./data/forklift/inbound:/opt/app/data
@@ -316,6 +318,7 @@ services:
     hostname: dart-ui
     labels:
       - "traefik.enable=true"
+      - "traefik.http.services.ui-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.dart-ui.rule=Host(`${PROXY_HOSTNAME:-localhost}`)"
       - "traefik.http.routers.dart-ui.priority=90"
     environment:
@@ -368,10 +371,12 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
+      - "traefik.http.services.concepts-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.concepts-api.rule=PathPrefix(`/dart/api/v1/cluster`)"
       - "traefik.http.routers.concepts-api.priority=${CONCEPTS_API_PRIORITY:-100}"
     networks:
       - dart
+
   ontology-registry:
     image: twosixlabsdart/ontology-registry:latest
     restart: unless-stopped
@@ -390,6 +395,7 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
+      - "traefik.http.services.ontology-service.loadbalancer.server.port=8084"
       - "traefik.http.routers.ontology-registry.rule=PathPrefix(`/dart/api/v1/ontologies`)"
       - "traefik.http.routers.ontology-registry.priority=${ONTOLOGY_REGISTRY_PRIORITY:-100}"
     networks:
@@ -403,6 +409,7 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
+      - "traefik.http.services.tenants-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.dart-tenants.rule=PathPrefix(`/dart/api/v1/tenants`)"
       - "traefik.http.routers.dart-tenants.priority=${DART_TENANTS_PRIORITY:-100}"
     environment:
