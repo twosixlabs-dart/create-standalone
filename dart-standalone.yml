@@ -246,7 +246,7 @@ services:
       ARANGODB_HOST: dart-arangodb
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.corpex-service.loadbalancer.server.port=8090"
+      - "traefik.http.services.cdrs-service.loadbalancer.server.port=8090"
       - "traefik.http.routers.cdr-retrieval.rule=PathPrefix(`/dart/api/v1/cdrs`)"
       - "traefik.http.routers.cdr-retrieval.priority=${CDR_RETRIEVAL_PRIORITY:-100}"
     networks:
@@ -274,7 +274,7 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
-      - "traefik.http.services.corpex-service.loadbalancer.server.port=8080"
+      - "traefik.http.services.readers-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.readers-output.rule=PathPrefix(`/dart/api/v1/readers`)"
       - "traefik.http.routers.readers-output.priority=${READERS_OUTPUT_PRIORITY:-100}"
     volumes:
@@ -370,7 +370,7 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
-      - "traefik.http.services.corpex-service.loadbalancer.server.port=8080"
+      - "traefik.http.services.concepts-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.concepts-api.rule=PathPrefix(`/dart/api/v1/cluster`)"
       - "traefik.http.routers.concepts-api.priority=${CONCEPTS_API_PRIORITY:-100}"
     networks:
@@ -394,7 +394,7 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
-      - "traefik.http.services.corpex-service.loadbalancer.server.port=8084"
+      - "traefik.http.services.ontology-service.loadbalancer.server.port=8084"
       - "traefik.http.routers.ontology-registry.rule=PathPrefix(`/dart/api/v1/ontologies`)"
       - "traefik.http.routers.ontology-registry.priority=${ONTOLOGY_REGISTRY_PRIORITY:-100}"
     networks:
@@ -408,7 +408,7 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
-      - "traefik.http.services.corpex-service.loadbalancer.server.port=8080"
+      - "traefik.http.services.tenants-service.loadbalancer.server.port=8080"
       - "traefik.http.routers.dart-tenants.rule=PathPrefix(`/dart/api/v1/tenants`)"
       - "traefik.http.routers.dart-tenants.priority=${DART_TENANTS_PRIORITY:-100}"
     environment:
