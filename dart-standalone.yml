@@ -366,7 +366,7 @@ services:
     environment:
       - DISCOVERY_ENABLED=false
       - CLUSTERING_SERVER_ENABLED=true
-      - CLUSTERING_HOST=http://bbn
+      - CLUSTERING_HOST=http://hume-oiad
       - CLUSTERING_PORT=5061
     labels:
       - "autoheal=true"
@@ -539,6 +539,19 @@ services:
     entrypoint: ["/usr/local/envs/py3-jni/bin/python3", "/wm_rootfs/git/Hume/src/python/dart_integration/streaming_processing.py"]
     networks:
       - dart
+
+  hume-oiad:
+    image: wmbbn/hume:R2022_03_21
+    container_name: hume-reader
+    hostname: hume-reader
+    volumes:
+      - ./hume-oiad-config.json:/extra/config.json
+    entrypoint: [ "/usr/local/envs/hat_new/bin/python3", "/wm_rootfs/git/Hume/src/python/concept_discovery_dart_integration/concept_discovery_online/api.py" ]
+    command:
+      - "--config /extra/config.json"
+    networks:
+      - dart
+
 #  indra:
 #    image:
 #    container_name: indra
