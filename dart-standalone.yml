@@ -384,7 +384,7 @@ services:
     hostname: ontology-registry
     environment:
       ONTOLOGY_REGISTRY_PORT: 8084
-      DART_AUTH_BYPASS: "false"
+      DART_AUTH_BYPASS: "true"
       POSTGRES_HOST: dart-postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: dart
@@ -395,7 +395,7 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
-      - "traefik.http.services.ontology-service.loadbalancer.server.port=8084"
+      - "traefik.http.services.ontology-registry.loadbalancer.server.port=8084"
       - "traefik.http.routers.ontology-registry.rule=PathPrefix(`/dart/api/v1/ontologies`)"
       - "traefik.http.routers.ontology-registry.priority=${ONTOLOGY_REGISTRY_PRIORITY:-100}"
     networks:
