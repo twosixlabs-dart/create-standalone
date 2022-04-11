@@ -516,7 +516,7 @@ services:
     environment:
       EIDOS_MEMORY: -Xmx20g
       REST_CONSUMER_DOCUMENT_SERVICE: http://cdr-retrieval:8090/dart/api/v1/cdrs
-      REST_CONSUMER_ONTOLOGY_SERVICE: http://cdr-retrieval:8090/dart/api/v1/ontologies
+      REST_CONSUMER_ONTOLOGY_SERVICE: http://ontology-registry:8084/dart/api/v1/ontologies
       REST_PRODUCER_SERVICE: http://readers-output:8080/dart/api/v1/readers/upload
       KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka-broker-1:19092
       NOTIFICATION_KAFKA_TOPIC: dart.reader.notifications
