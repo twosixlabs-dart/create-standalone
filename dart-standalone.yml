@@ -153,7 +153,7 @@ services:
     image: twosixlabsdart/confluent-kafka:latest
     restart: unless-stopped
     hostname: kafka-broker-1
-    container_name: kakfka-broker-1
+    container_name: kafka-broker-1
     ports:
       - 9092:9092
     environment:
@@ -368,6 +368,11 @@ services:
       - CLUSTERING_SERVER_ENABLED=true
       - CLUSTERING_HOST=http://hume-oiad
       - CLUSTERING_PORT=5061
+      - POSTGRES_HOST=dart-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=dart
+      - POSTGRES_PASSWORD=dart_pass
+      - POSTGRES_DATABASE=dart_db
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
