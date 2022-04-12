@@ -550,7 +550,9 @@ services:
       - "autoheal=true"
     volumes:
       - ./hume-reader-config.json:/extra/config.json
-    entrypoint: ["/usr/local/envs/py3-jni/bin/python3", "/wm_rootfs/git/Hume/src/python/dart_integration/streaming_processing.py"]
+    entrypoint: ["/usr/local/envs/py3-jni/bin/python3"]
+    command:
+      - "/wm_rootfs/git/Hume/src/python/dart_integration/streaming_processing.py"
     networks:
       - dart
 

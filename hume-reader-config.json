@@ -15,7 +15,7 @@
     "from_docker"
   ],
   "hume.domain": "WM",
-  "hume.num_of_vcpus": 2,
+  "hume.num_of_vcpus": 3,
   "hume.tmp_dir": "/hume",
   "hume.streaming.mini_batch_size": 3,
   "hume.streaming.mini_batch_wait_time": 3,
