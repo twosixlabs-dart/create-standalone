@@ -543,7 +543,7 @@ services:
       - dart
 
   hume-reader:
-    image: wmbbn/hume:R2022_03_21
+    image: twosixlabsdart/bbn-hume-reader:R2022_03_21
     container_name: hume-reader
     hostname: hume-reader
     labels:
@@ -557,7 +557,7 @@ services:
       - dart
 
   hume-oiad:
-    image: wmbbn/hume:R2022_03_21
+    image: twosixlabsdart/bbn-hume-oiad:R2022_03_21
     container_name: hume-oiad
     hostname: hume-oiad
     volumes:
