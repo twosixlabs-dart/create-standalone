@@ -546,9 +546,11 @@ services:
     hostname: hume-oiad
     volumes:
       - ./hume-oiad-config.json:/extra/config.json
-    entrypoint: [ "/usr/local/envs/hat_new/bin/python3", "/wm_rootfs/git/Hume/src/python/concept_discovery_dart_integration/concept_discovery_online/api.py" ]
+    entrypoint: [ "/usr/local/envs/hat_new/bin/python3" ]
     command:
-      - "--config /extra/config.json"
+      - "/wm_rootfs/git/Hume/src/python/concept_discovery_dart_integration/concept_discovery_online/api.py"
+      - "--config"
+      - "/extra/config.json"
     networks:
       - dart
 
