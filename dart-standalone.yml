@@ -373,6 +373,8 @@ services:
       - POSTGRES_USER=dart
       - POSTGRES_PASSWORD=dart_pass
       - POSTGRES_DATABASE=dart_db
+      - ARANGODB_HOST=dart-arangodb
+      - ARANGODB_PORT=8529
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
