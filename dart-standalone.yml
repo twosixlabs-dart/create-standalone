@@ -153,7 +153,7 @@ services:
     image: twosixlabsdart/confluent-kafka:latest
     restart: unless-stopped
     hostname: kafka-broker-1
-    container_name: kakfka-broker-1
+    container_name: kafka-broker-1
     ports:
       - 9092:9092
     environment:
@@ -244,11 +244,14 @@ services:
     environment:
       DART_AUTH_BYPASS: "true"
       ARANGODB_HOST: dart-arangodb
+      PERSISTENCE_DIR: /opt/app/data/completed
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.cdrs-service.loadbalancer.server.port=8090"
       - "traefik.http.routers.cdr-retrieval.rule=PathPrefix(`/dart/api/v1/cdrs`)"
       - "traefik.http.routers.cdr-retrieval.priority=${CDR_RETRIEVAL_PRIORITY:-100}"
+    volumes:
+      - ./data/forklift/completed:/opt/app/data/completed
     networks:
       - dart
 
@@ -366,8 +369,15 @@ services:
     environment:
       - DISCOVERY_ENABLED=false
       - CLUSTERING_SERVER_ENABLED=true
-      - CLUSTERING_HOST=http://bbn
+      - CLUSTERING_HOST=http://hume-oiad
       - CLUSTERING_PORT=5061
+      - POSTGRES_HOST=dart-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=dart
+      - POSTGRES_PASSWORD=dart_pass
+      - POSTGRES_DATABASE=dart_db
+      - ARANGODB_HOST=dart-arangodb
+      - ARANGODB_PORT=8529
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
@@ -384,7 +394,7 @@ services:
     hostname: ontology-registry
     environment:
       ONTOLOGY_REGISTRY_PORT: 8084
-      DART_AUTH_BYPASS: "false"
+      DART_AUTH_BYPASS: "true"
       POSTGRES_HOST: dart-postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: dart
@@ -395,7 +405,7 @@ services:
     labels:
       - "autoheal=true"
       - "traefik.enable=true"
-      - "traefik.http.services.ontology-service.loadbalancer.server.port=8084"
+      - "traefik.http.services.ontology-registry.loadbalancer.server.port=8084"
       - "traefik.http.routers.ontology-registry.rule=PathPrefix(`/dart/api/v1/ontologies`)"
       - "traefik.http.routers.ontology-registry.priority=${ONTOLOGY_REGISTRY_PRIORITY:-100}"
     networks:
@@ -416,6 +426,7 @@ services:
       DART_AUTH_BYPASS: "true"
       ARANGODB_HOST: dart-arangodb
       ELASTICSEARCH_HOST: dart-es-master
+      INDEX_2: none
     networks:
       - dart
 
@@ -515,7 +526,7 @@ services:
     environment:
       EIDOS_MEMORY: -Xmx20g
       REST_CONSUMER_DOCUMENT_SERVICE: http://cdr-retrieval:8090/dart/api/v1/cdrs
-      REST_CONSUMER_ONTOLOGY_SERVICE: http://cdr-retrieval:8090/dart/api/v1/ontologies
+      REST_CONSUMER_ONTOLOGY_SERVICE: http://ontology-registry:8084/dart/api/v1/ontologies
       REST_PRODUCER_SERVICE: http://readers-output:8080/dart/api/v1/readers/upload
       KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka-broker-1:19092
       NOTIFICATION_KAFKA_TOPIC: dart.reader.notifications
@@ -524,8 +535,40 @@ services:
       KAFKA_CONSUMER_SECURITY_PROTOCOL: PLAINTEXT
       EIDOS_VERSION: julyEmbed1
       ONTOLOGY_VERSION: 2.3
+    labels:
+      - "autoheal=true"
     volumes:
       - ./data/eidos:/opt/app/data
+    networks:
+      - dart
+
+  hume-reader:
+    image: wmbbn/hume:R2022_03_21
+    container_name: hume-reader
+    hostname: hume-reader
+    labels:
+      - "autoheal=true"
+    volumes:
+      - ./hume-reader-config.json:/extra/config.json
+    entrypoint: ["/usr/local/envs/py3-jni/bin/python3"]
+    command:
+      - "/wm_rootfs/git/Hume/src/python/dart_integration/streaming_processing.py"
+    networks:
+      - dart
+
+  hume-oiad:
+    image: wmbbn/hume:R2022_03_21
+    container_name: hume-oiad
+    hostname: hume-oiad
+    volumes:
+      - ./hume-oiad-config.json:/extra/config.json
+    labels:
+      - "autoheal=true"
+    entrypoint: [ "/usr/local/envs/hat_new/bin/python3" ]
+    command:
+      - "/wm_rootfs/git/Hume/src/python/concept_discovery_dart_integration/concept_discovery_online/api.py"
+      - "--config"
+      - "/extra/config.json"
     networks:
       - dart
 

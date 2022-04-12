@@ -1,0 +1,10 @@
+{
+  "CDR_retrieval": "http://cdr-retrieval:8090/dart/api/v1/cdrs",
+  "hume.oiad.use_local_cdrs": false,
+  "hume.anaconda_root": "/usr/local/",
+  "hume.use_regrounding_cache": true,
+  "hume.regrounding_cache_path": "/bbn/cache",
+  "hume.oiad.port": 5061,
+  "hume.oiad.runtime_dir": "/bbn/runtime",
+  "hume.cdr_cache_dir": "/bbn/cache"
+}

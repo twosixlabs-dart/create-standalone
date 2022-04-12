@@ -1,0 +1,27 @@
+{
+  "kafka.bootstrap.servers": "kafka-broker-1:19092",
+  "app": {
+    "id": "hume",
+    "auto_offset_reset": "earliest",
+    "enable_auto_commit": false
+  },
+  "topic": {
+    "from": "dart.cdr.streaming.updates"
+  },
+  "CDR_retrieval": "http://cdr-retrieval:8090/dart/api/v1/cdrs",
+  "DART_upload": "http://readers-output:8080/dart/api/v1/readers/upload",
+  "Ontology_retrieval": "http://ontology-registry:8084/dart/api/v1/ontologies",
+  "DART_upload_labels": [
+    "from_docker"
+  ],
+  "hume.domain": "WM",
+  "hume.num_of_vcpus": 3,
+  "hume.tmp_dir": "/hume",
+  "hume.streaming.mini_batch_size": 3,
+  "hume.streaming.mini_batch_wait_time": 3,
+  "hume.streaming.keep_pipeline_data": "true",
+  "hume.streaming.skip_processed": "true",
+  "hume.use_regrounding_cache": "true",
+  "hume.regrounding_cache_path": "true",
+  "hume.cdr_cache_dir": "/hume/cache"
+}
