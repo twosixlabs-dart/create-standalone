@@ -244,11 +244,14 @@ services:
     environment:
       DART_AUTH_BYPASS: "true"
       ARANGODB_HOST: dart-arangodb
+      PERSISTENCE_DIR: /opt/app/data/completed
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.cdrs-service.loadbalancer.server.port=8090"
       - "traefik.http.routers.cdr-retrieval.rule=PathPrefix(`/dart/api/v1/cdrs`)"
       - "traefik.http.routers.cdr-retrieval.priority=${CDR_RETRIEVAL_PRIORITY:-100}"
+    volumes:
+      - ./data/forklift/completed:/opt/app/data/completed
     networks:
       - dart
 
