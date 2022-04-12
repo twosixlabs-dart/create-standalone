@@ -535,6 +535,7 @@ services:
       KAFKA_CONSUMER_SECURITY_PROTOCOL: PLAINTEXT
       EIDOS_VERSION: julyEmbed1
       ONTOLOGY_VERSION: 2.3
+    restart: unless-stopped
     labels:
       - "autoheal=true"
     volumes:
@@ -546,6 +547,7 @@ services:
     image: twosixlabsdart/bbn-hume-reader:R2022_03_21
     container_name: hume-reader
     hostname: hume-reader
+    restart: unless-stopped
     labels:
       - "autoheal=true"
     networks:
@@ -555,6 +557,7 @@ services:
     image: twosixlabsdart/bbn-hume-oiad:R2022_03_21
     container_name: hume-oiad
     hostname: hume-oiad
+    restart: unless-stopped
     labels:
       - "autoheal=true"
     networks:
