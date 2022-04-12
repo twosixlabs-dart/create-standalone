@@ -530,6 +530,8 @@ services:
       KAFKA_CONSUMER_SECURITY_PROTOCOL: PLAINTEXT
       EIDOS_VERSION: julyEmbed1
       ONTOLOGY_VERSION: 2.3
+    labels:
+      - "autoheal=true"
     volumes:
       - ./data/eidos:/opt/app/data
     networks:
@@ -539,6 +541,8 @@ services:
     image: wmbbn/hume:R2022_03_21
     container_name: hume-reader
     hostname: hume-reader
+    labels:
+      - "autoheal=true"
     volumes:
       - ./hume-reader-config.json:/extra/config.json
     entrypoint: ["/usr/local/envs/py3-jni/bin/python3", "/wm_rootfs/git/Hume/src/python/dart_integration/streaming_processing.py"]
@@ -551,6 +555,8 @@ services:
     hostname: hume-oiad
     volumes:
       - ./hume-oiad-config.json:/extra/config.json
+    labels:
+      - "autoheal=true"
     entrypoint: [ "/usr/local/envs/hat_new/bin/python3" ]
     command:
       - "/wm_rootfs/git/Hume/src/python/concept_discovery_dart_integration/concept_discovery_online/api.py"
