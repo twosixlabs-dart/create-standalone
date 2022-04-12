@@ -548,11 +548,6 @@ services:
     hostname: hume-reader
     labels:
       - "autoheal=true"
-    volumes:
-      - ./hume-reader-config.json:/extra/config.json
-    entrypoint: ["/usr/local/envs/py3-jni/bin/python3"]
-    command:
-      - "/wm_rootfs/git/Hume/src/python/dart_integration/streaming_processing.py"
     networks:
       - dart
 
@@ -560,15 +555,8 @@ services:
     image: twosixlabsdart/bbn-hume-oiad:R2022_03_21
     container_name: hume-oiad
     hostname: hume-oiad
-    volumes:
-      - ./hume-oiad-config.json:/extra/config.json
     labels:
       - "autoheal=true"
-    entrypoint: [ "/usr/local/envs/hat_new/bin/python3" ]
-    command:
-      - "/wm_rootfs/git/Hume/src/python/concept_discovery_dart_integration/concept_discovery_online/api.py"
-      - "--config"
-      - "/extra/config.json"
     networks:
       - dart
 
