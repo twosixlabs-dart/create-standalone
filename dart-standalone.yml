@@ -567,6 +567,8 @@ services:
     image: indralab/indra_world
     container_name: indra
     hostname: indra
+    ports:
+      - "9444:8000"
     environment:
       INDRA_WM_SERVICE_DB: postgresql://postgres:${POSTGRES_PASSWORD:-indra}@indra-db:5432
       DART_WM_URL: http://traefik
