@@ -572,7 +572,7 @@ services:
     environment:
       INDRA_WM_SERVICE_DB: postgresql://postgres:${POSTGRES_PASSWORD:-mysecretpassword}@indra-db:5432
       DART_WM_URL: http://traefik
-      LOCAL_DEPLOY: "true"
+      LOCAL_DEPLOYMENT: "true"
     entrypoint: gunicorn -w 1 -b :8000 -t 600 indra_world.service.app:app
     networks:
       - dart
