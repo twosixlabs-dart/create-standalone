@@ -573,14 +573,18 @@ services:
       INDRA_WM_SERVICE_DB: postgresql://postgres:${POSTGRES_PASSWORD:-indra}@indra-db:5432
       DART_WM_URL: http://traefik
     entrypoint: gunicorn -w 1 -b :8000 -t 600 indra_world.service.app:app
+    networks:
+      - dart
 
   indra-db:
     image: indralab/indra_world_db
     container_name: indra-db
     hostname: indra-db
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-indra}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mysecretpassword}
       PGDATA: /var/lib/postgresql/pgdata
+    networks:
+      - dart
 
   autoheal:
     image: willfarrell/autoheal
