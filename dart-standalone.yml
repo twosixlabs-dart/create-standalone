@@ -266,7 +266,7 @@ services:
       start_period: 30s
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
-      REST_BOOTSTRAP_SERVERS: "http://indra/dart/notify"
+      REST_BOOTSTRAP_SERVERS: "http://indra:8000/dart/notify"
       POSTGRES_HOST: dart-postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: dart
@@ -571,9 +571,11 @@ services:
       - "9444:8000"
     environment:
       INDRA_WM_SERVICE_DB: postgresql://postgres:${POSTGRES_PASSWORD:-mysecretpassword}@indra-db:5432
-      DART_WM_URL: http://traefik
+      DART_WM_URL: http://traefik/dart/api/v1
       LOCAL_DEPLOYMENT: "true"
     entrypoint: gunicorn -w 1 -b :8000 -t 600 indra_world.service.app:app
+    volumes:
+      - ./data/indra:/sw
     networks:
       - dart
 
