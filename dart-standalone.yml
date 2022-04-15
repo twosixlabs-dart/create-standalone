@@ -266,7 +266,7 @@ services:
       start_period: 30s
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
-      REST_BOOTSTRAP_SERVERS: "http://indra:8000/dart/notify"
+      NOTIFICATION_REST_URLS: "http://indra:8000/dart/notify"
       POSTGRES_HOST: dart-postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: dart
