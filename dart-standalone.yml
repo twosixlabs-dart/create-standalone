@@ -574,8 +574,8 @@ services:
       DART_WM_URL: http://traefik/dart/api/v1
       LOCAL_DEPLOYMENT: "true"
     entrypoint: gunicorn -w 1 -b :8000 -t 600 indra_world.service.app:app
-#    volumes:
-#      - ./data/indra:/sw
+    volumes:
+      - ./data/indra:/assembly
     networks:
       - dart
 
