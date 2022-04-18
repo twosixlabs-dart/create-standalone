@@ -575,7 +575,7 @@ services:
       LOCAL_DEPLOYMENT: "true"
     entrypoint: gunicorn -w 1 -b :8000 -t 600 indra_world.service.app:app
     volumes:
-      - ./data/indra:/assembly
+      - ./data/indra:/data
     networks:
       - dart
 
