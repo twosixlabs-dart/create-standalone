@@ -531,15 +531,15 @@ services:
       KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka-broker-1:19092
       NOTIFICATION_KAFKA_TOPIC: dart.reader.notifications
       KAFKA_APP_TOPIC: dart.cdr.streaming.updates
-      KAFKA_CONSUMER_OUTPUT_DIR: /opt/app/data/input/kafka
       KAFKA_CONSUMER_SECURITY_PROTOCOL: PLAINTEXT
+      EIDOS_BASE_DIR: ../corpora/corpus
       EIDOS_VERSION: julyEmbed1
       ONTOLOGY_VERSION: 2.3
     restart: unless-stopped
     labels:
       - "autoheal=true"
     volumes:
-      - ./data/eidos:/opt/app/data
+      - ./data/eidos:/corpora/corpus
     networks:
       - dart
 
