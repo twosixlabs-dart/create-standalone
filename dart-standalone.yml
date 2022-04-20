@@ -266,7 +266,7 @@ services:
       start_period: 30s
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
-      REST_BOOTSTRAP_SERVERS: "http://indra/dart/notify"
+      NOTIFICATION_REST_URLS: "http://indra:8000/dart/notify"
       POSTGRES_HOST: dart-postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: dart
@@ -563,25 +563,31 @@ services:
     networks:
       - dart
 
-#  indra:
-#    image:
-#    container_name: indra
-#    hostname: indra
-#    environment:
-#      DART_WM_USERNAME: indra
-#      INDRA_WM_SERVICE_DB: postgresql://postgres:${POSTGRES_PASSWORD}@indra-db:5432
-#      DART_WM_URL: http://readers-output:1331
-#      DART_WM_PASSWORD: ${DART_WM_PASSWORD}
-#      INDRA_WORLD_ONTOLOGY_URL: <GitHub URL to ontology being used, may not be necessary if we start tracking ontologies via DART>
-#    entrypoint: gunicorn -w 1 -b :8000 -t 600 indra_world.service.app:app
+  indra:
+    image: indralab/indra_world
+    container_name: indra
+    hostname: indra
+    ports:
+      - "9444:8000"
+    environment:
+      INDRA_WM_SERVICE_DB: postgresql://postgres:${POSTGRES_PASSWORD:-mysecretpassword}@indra-db:5432
+      DART_WM_URL: http://traefik/dart/api/v1
+      LOCAL_DEPLOYMENT: "true"
+    entrypoint: gunicorn -w 1 -b :8000 -t 600 indra_world.service.app:app
+    volumes:
+      - ./data/indra:/data
+    networks:
+      - dart
 
-#  indra-db:
-#    image:
-#    container_name: indra-db
-#    hostname: indra-db
-#    environment:
-#      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-#      PGDATA: /var/lib/postgresql/pgdata
+  indra-db:
+    image: indralab/indra_world_db
+    container_name: indra-db
+    hostname: indra-db
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mysecretpassword}
+      PGDATA: /var/lib/postgresql/pgdata
+    networks:
+      - dart
 
   autoheal:
     image: willfarrell/autoheal
