@@ -303,7 +303,7 @@ services:
       CORPEX_HOST: corpex
       CORPEX_PORT: 8088
       DART_NUM_ANNOTATORS: 4
-      CORS_ALLOWED_ORIGINS: http://${REST_HOSTNAME}
+      CORS_ALLOWED_ORIGINS: ""
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.forklift-service.loadbalancer.server.port=8091"
@@ -444,7 +444,6 @@ services:
     networks:
       - dart
     ports:
-      - "443:443"
       - "80:80"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
