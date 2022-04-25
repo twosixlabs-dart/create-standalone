@@ -597,6 +597,8 @@ services:
       - AUTOHEAL_CONTAINER_LABEL=all
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - dart
 
 networks:
   dart:
