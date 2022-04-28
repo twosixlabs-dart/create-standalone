@@ -237,7 +237,7 @@ services:
       - dart
 
   cdr-retrieval:
-    image: twosixlabsdart/cdr-retrieval:1.0.11
+    image: twosixlabsdart/cdr-retrieval:latest
     restart: unless-stopped
     hostname: cdr-retrieval
     container_name: cdr-retrieval
