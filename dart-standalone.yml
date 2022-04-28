@@ -426,7 +426,6 @@ services:
       DART_AUTH_BYPASS: "true"
       ARANGODB_HOST: dart-arangodb
       ELASTICSEARCH_HOST: dart-es-master
-      INDEX_2: none
     networks:
       - dart
 
