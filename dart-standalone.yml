@@ -1,349 +1,572 @@
-version: '3.7'
-
+networks:
+  dart: null
 services:
-
+  autoheal:
+    container_name: autoheal
+    environment:
+    - AUTOHEAL_CONTAINER_LABEL=all
+    hostname: autoheal
+    image: willfarrell/autoheal
+    networks:
+    - dart
+    restart: unless-stopped
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  cdr-retrieval:
+    container_name: cdr-retrieval
+    environment:
+      ARANGODB_HOST: dart-arangodb
+      DART_AUTH_BYPASS: 'true'
+      PERSISTENCE_DIR: /opt/app/data/completed
+    hostname: cdr-retrieval
+    image: twosixlabsdart/cdr-retrieval:1.0.8
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.cdrs-service.loadbalancer.server.port=8090
+    - traefik.http.routers.cdr-retrieval.rule=PathPrefix(`/dart/api/v1/cdrs`)
+    - traefik.http.routers.cdr-retrieval.priority=${CDR_RETRIEVAL_PRIORITY:-100}
+    networks:
+    - dart
+    restart: unless-stopped
+    volumes:
+    - ./data/forklift/completed:/opt/app/data/completed
+  concepts-api:
+    container_name: concepts-api
+    environment:
+    - DISCOVERY_ENABLED=false
+    - CLUSTERING_SERVER_ENABLED=true
+    - CLUSTERING_HOST=http://hume-oiad
+    - CLUSTERING_PORT=5061
+    - POSTGRES_HOST=dart-postgres
+    - POSTGRES_PORT=5432
+    - POSTGRES_USER=dart
+    - POSTGRES_PASSWORD=dart_pass
+    - POSTGRES_DATABASE=dart_db
+    - ARANGODB_HOST=dart-arangodb
+    - ARANGODB_PORT=8529
+    hostname: concepts-api
+    image: twosixlabsdart/concepts-api:3.0.9
+    labels:
+    - autoheal=true
+    - traefik.enable=true
+    - traefik.http.services.concepts-service.loadbalancer.server.port=8080
+    - traefik.http.routers.concepts-api.rule=PathPrefix(`/dart/api/v1/cluster`)
+    - traefik.http.routers.concepts-api.priority=${CONCEPTS_API_PRIORITY:-100}
+    networks:
+    - dart
+    restart: always
+  corpex:
+    container_name: corpex
+    environment:
+      DART_AUTH_BYPASS: 'true'
+      ELASTICSEARCH_HOST: dart-es-master
+      ELASTICSEARCH_PORT: 9200
+    hostname: corpex
+    image: twosixlabsdart/corpex:3.0.16
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.corpex-service.loadbalancer.server.port=8088
+    - traefik.http.routers.corpex.priority=100
+    - traefik.http.routers.corpex.rule=PathPrefix(`/dart/api/v1/corpex`)
+    networks:
+    - dart
+    restart: unless-stopped
   dart-arangodb:
     container_name: dart-arangodb
     hostname: dart-arangodb
-    image: twosixlabsdart/dart-arangodb:latest
+    image: twosixlabsdart/dart-arangodb:3.0.5
+    networks:
+    - dart
+    ports:
+    - 8529:8529
     restart: unless-stopped
     volumes:
-      - ./data/arangodb/data:/opt/arangodb/data
-    ports:
-      - 8529:8529
-    networks:
-      - dart
-
-  dart-postgres:
-    container_name: dart-postgres
-    hostname: dart-postgres
-    image: twosixlabsdart/dart-postgres:latest
-    restart: unless-stopped
-    environment:
-      DART_USER: dart
-      DART_PASSWORD: dart_pass
-      DART_DB: dart_db
-    volumes:
-      - ./data/dart-postgres/data:/var/lib/postgresql/data
-    ports:
-      - 5432:5432
-    networks:
-      - dart
-
+    - ./data/arangodb/data:/opt/arangodb/data
   dart-es-master:
-    image: twosixlabsdart/dart-es:latest
     container_name: dart-es-master
-    hostname: dart-es-master
-    restart: unless-stopped
     environment:
-      ES_TIMEOUT: 120
+      ES_CLUSTER: dart-es
+      ES_MASTER_NAME: dart-es-master
       ES_NODE_ID: 0
       ES_ROLE: master
-      ES_MASTER_NAME: dart-es-master
-      ES_CLUSTER: dart-es
-    labels:
-      autoheal: true
-    ports:
-      - 9200
-      - 9300
+      ES_TIMEOUT: 120
     healthcheck:
-      test: [ "CMD", "/opt/elasticsearch/bin/healthcheck-es.sh" ]
       interval: 10s
       start_period: 30s
-    volumes:
-      - ./data/dart-es-master:/opt/app/data
+      test:
+      - CMD
+      - /opt/elasticsearch/bin/healthcheck-es.sh
+    hostname: dart-es-master
+    image: twosixlabsdart/dart-es:3.1.8
+    labels:
+      autoheal: true
     networks:
-      - dart
-
+    - dart
+    ports:
+    - 9200
+    - 9300
+    restart: unless-stopped
+    volumes:
+    - ./data/dart-es-master:/opt/app/data
   dart-es-replica-1:
-    image: twosixlabsdart/dart-es:latest
-    restart: unless-stopped
     container_name: dart-es-replica-1
-    hostname: dart-es-replica-1
+    depends_on:
+    - dart-es-master
     environment:
-      ES_TIMEOUT: 120
-      ES_ROLE: replica
-      ES_NODE_NAME: dart-es-replica-1
+      ES_CLUSTER: dart-es
+      ES_DISCOVERY_HOST: dart-es-master
+      ES_MASTER_NAME: dart-es-master
       ES_NODE_ID: 1
-      ES_CLUSTER: dart-es
-      ES_MASTER_NAME: dart-es-master
-      ES_DISCOVERY_HOST: dart-es-master
-    ports:
-      - 9201
-      - 9301
-    labels:
-      autoheal: true
-    healthcheck:
-      test: [ "CMD", "/opt/elasticsearch/bin/healthcheck-es.sh" ]
-      interval: 10s
-      start_period: 30s
-    volumes:
-      - ./data/dart-es-replica-1:/opt/app/data
-    depends_on:
-      - dart-es-master
-    networks:
-      - dart
-
-  dart-es-replica-2:
-    image: twosixlabsdart/dart-es:latest
-    restart: unless-stopped
-    container_name: dart-es-replica-2
-    hostname: dart-es-replica-2
-    environment:
-      ES_TIMEOUT: 120
+      ES_NODE_NAME: dart-es-replica-1
       ES_ROLE: replica
-      ES_NODE_NAME: dart-es-replica-2
-      ES_NODE_ID: 2
-      ES_CLUSTER: dart-es
-      ES_MASTER_NAME: dart-es-master
-      ES_DISCOVERY_HOST: dart-es-master
-    labels:
-      autoheal: true
-    ports:
-      - 9202
-      - 9302
+      ES_TIMEOUT: 120
     healthcheck:
-      test: [ "CMD", "/opt/elasticsearch/bin/healthcheck-es.sh" ]
       interval: 10s
       start_period: 30s
-    volumes:
-      - ./data/dart-es-replica-2:/opt/app/data
-    depends_on:
-      - dart-es-master
+      test:
+      - CMD
+      - /opt/elasticsearch/bin/healthcheck-es.sh
+    hostname: dart-es-replica-1
+    image: twosixlabsdart/dart-es:3.1.8
+    labels:
+      autoheal: true
     networks:
-      - dart
-
-  ladle:
-    image: twosixlabsdart/ladle:latest
-    container_name: ladle
-    hostname: ladle
+    - dart
+    ports:
+    - 9201
+    - 9301
     restart: unless-stopped
+    volumes:
+    - ./data/dart-es-replica-1:/opt/app/data
+  dart-es-replica-2:
+    container_name: dart-es-replica-2
+    depends_on:
+    - dart-es-master
     environment:
+      ES_CLUSTER: dart-es
+      ES_DISCOVERY_HOST: dart-es-master
+      ES_MASTER_NAME: dart-es-master
+      ES_NODE_ID: 2
+      ES_NODE_NAME: dart-es-replica-2
+      ES_ROLE: replica
+      ES_TIMEOUT: 120
+    healthcheck:
+      interval: 10s
+      start_period: 30s
+      test:
+      - CMD
+      - /opt/elasticsearch/bin/healthcheck-es.sh
+    hostname: dart-es-replica-2
+    image: twosixlabsdart/dart-es:3.1.8
+    labels:
+      autoheal: true
+    networks:
+    - dart
+    ports:
+    - 9202
+    - 9302
+    restart: unless-stopped
+    volumes:
+    - ./data/dart-es-replica-2:/opt/app/data
+  dart-postgres:
+    container_name: dart-postgres
+    environment:
+      DART_DB: dart_db
+      DART_PASSWORD: dart_pass
+      DART_USER: dart
+    hostname: dart-postgres
+    image: twosixlabsdart/dart-postgres:3.0.12
+    networks:
+    - dart
+    ports:
+    - 5432:5432
+    restart: unless-stopped
+    volumes:
+    - ./data/dart-postgres/data:/var/lib/postgresql/data
+  dart-tenants:
+    container_name: dart-tenants
+    environment:
+      ARANGODB_HOST: dart-arangodb
+      DART_AUTH_BYPASS: 'true'
+      ELASTICSEARCH_HOST: dart-es-master
+      INDEX_2: none
+    hostname: dart-tenants
+    image: twosixlabsdart/dart-tenants:3.0.9
+    labels:
+    - autoheal=true
+    - traefik.enable=true
+    - traefik.http.services.tenants-service.loadbalancer.server.port=8080
+    - traefik.http.routers.dart-tenants.rule=PathPrefix(`/dart/api/v1/tenants`)
+    - traefik.http.routers.dart-tenants.priority=${DART_TENANTS_PRIORITY:-100}
+    networks:
+    - dart
+    restart: unless-stopped
+  dart-ui:
+    container_name: dart-ui
+    environment:
+      ARANGODB_HOST: dart-arangodb
+      CLUSTERING_HOST: concepts-api
+      CLUSTERING_PORT: 8080
+      CLUSTERING_SCHEME: http
+      CLUSTERING_TEST_MODE: 'false'
+      DART_AUTH_BYPASS: 'true'
+      DART_UI_ENV: default
       KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
-      PRODUCER_INTERFACE: kafka
-      MICRONAUT_SERVER_MULTIPART_MAX-FILE-SIZE: 504857600
-      MICRONAUT_SERVER_MAX-REQUEST-SIZE: 504857600
+      POSTGRES_DATABASE: dart_db
+      POSTGRES_HOST: dart-postgres
+      POSTGRES_PASSWORD: dart_pass
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: dart
+      PROCUREMENT_URL: http://${PROXY_HOSTNAME:-localhost}
+      RAW_DOC_URL: http://${PROXY_HOSTNAME:-localhost}/dart/api/v1/cdrs/raw
+      SEARCH_URL: http://${PROXY_HOSTNAME:-localhost}
+    hostname: dart-ui
+    image: twosixlabsdart/dart-ui:3.0.73
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.ui-service.loadbalancer.server.port=8080
+    - traefik.http.routers.dart-ui.rule=Host(`${PROXY_HOSTNAME:-localhost}`)
+    - traefik.http.routers.dart-ui.priority=90
+    networks:
+    - dart
+    restart: unless-stopped
+  document-processing-pipeline:
+    container_name: document-processing-pipeline
+    depends_on:
+    - kafka-broker-1
+    - topic-provisioner
+    environment:
+      ARANGODB_HOST: dart-arangodb
+      ARANGODB_PORT: 8529
+      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
+      POLL_SIZE: 200
+      PROGRAM_ARGS: --primary-ds arangodb --sql-ds postgresql
+      QNTFY_CATEGORIES_HOST: qntfy-categories-annotator
+      QNTFY_EVENTS_HOST: qntfy-events-annotator
+      QNTFY_KEY_SENTENCE_HOST: qntfy-key-sentence-annotator
+      QNTFY_NER_HOST: qntfy-ner-annotator
+      SEARCH_HOST: dart-es-master
+      SEARCH_PORT: 9200
       SQL_DB_ENGINE: postgresql
       SQL_DB_HOST: dart-postgres
+      SQL_DB_NAME: dart_db
+      SQL_DB_PASSWORD: dart_pass
       SQL_DB_PORT: 5432
       SQL_DB_USER: dart
-      SQL_DB_PASSWORD: dart_pass
-      SQL_DB_NAME: dart_db
-      SQL_DB_TABLE: sams_progress
+      STREAM_ANNOTATION_UPDATES: 'false'
+    hostname: document-processing-pipeline
+    image: twosixlabsdart/dart-document-ingestion:3.0.9
     networks:
-      - dart
-
-  zookeeper-1:
-    image: zookeeper:3.4.14
+    - dart
     restart: unless-stopped
-    container_name: zookeeper-1
-    hostname: zookeeper-1
+  eidos:
+    container_name: eidos
     environment:
-      ZOO_MY_ID: 1
-      ZOO_PORT: 2181
-      ZOO_SERVERS: server.1=0.0.0.0:2888:3888
-      ZOO_MAX_CLIENT_CNXNS: 100000
-    volumes:
-      - ./data/zookeeper-1/data:/data
-      - ./data/zookeeper-1/datalog:/datalog
+      EIDOS_BASE_DIR: ../corpora/corpus
+      EIDOS_MEMORY: -Xmx20g
+      EIDOS_VERSION: julyEmbed1
+      KAFKA_APP_TOPIC: dart.cdr.streaming.updates
+      KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka-broker-1:19092
+      KAFKA_CONSUMER_SECURITY_PROTOCOL: PLAINTEXT
+      NOTIFICATION_KAFKA_TOPIC: dart.reader.notifications
+      ONTOLOGY_VERSION: 2.3
+      REST_CONSUMER_DOCUMENT_SERVICE: http://cdr-retrieval:8090/dart/api/v1/cdrs
+      REST_CONSUMER_ONTOLOGY_SERVICE: http://ontology-registry:8084/dart/api/v1/ontologies
+      REST_PRODUCER_SERVICE: http://readers-output:8080/dart/api/v1/readers/upload
+    hostname: eidos
+    image: clulab/eidos-dart:1.6.2
+    labels:
+    - autoheal=true
     networks:
-      - dart
-
-  kafka-broker-1:
-    image: twosixlabsdart/confluent-kafka:latest
+    - dart
     restart: unless-stopped
-    hostname: kafka-broker-1
-    container_name: kafka-broker-1
+    volumes:
+    - ./data/eidos:/corpora/corpus
+  forklift:
+    container_name: forklift
+    environment:
+      CORPEX_HOST: corpex
+      CORPEX_PORT: 8088
+      CORS_ALLOWED_ORIGINS: ''
+      DART_AUTH_BYPASS: 'true'
+      DART_NUM_ANNOTATORS: 4
+      FORKLIFT_HTTP_PORT: '8091'
+      JAVA_OPTS: -Xms4g -Xmx4g
+      OPERATIONS_DB_HOST: dart-postgres
+      OPERATIONS_DB_NAME: dart_db
+      OPERATIONS_DB_PASSWORD: dart_pass
+      OPERATIONS_DB_PORT: 5432
+      OPERATIONS_DB_TABLE: pipeline_status
+      OPERATIONS_DB_USER: dart
+      PROGRAM_ARGS: --env docker
+    image: twosixlabsdart/forklift:3.0.7
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.forklift-service.loadbalancer.server.port=8091
+    - traefik.http.routers.forklift.rule=PathPrefix(`/dart/api/v1/forklift`) || PathPrefix(`/dart/api/v1/status`)
+    - traefik.http.routers.forklift.priority=100
+    networks:
+    - dart
+    restart: unless-stopped
+    volumes:
+    - ./data/forklift/inbound:/opt/app/data
+  hume-oiad:
+    container_name: hume-oiad
+    hostname: hume-oiad
+    image: twosixlabsdart/bbn-hume-oiad:R2022_03_21
+    labels:
+    - autoheal=true
+    networks:
+    - dart
+    restart: unless-stopped
+  hume-reader:
+    container_name: hume-reader
+    hostname: hume-reader
+    image: twosixlabsdart/bbn-hume-reader:R2022_03_21
+    labels:
+    - autoheal=true
+    networks:
+    - dart
+    restart: unless-stopped
+  indra:
+    container_name: indra
+    entrypoint: gunicorn -w 1 -b :8000 -t 600 indra_world.service.app:app
+    environment:
+      DART_WM_URL: http://traefik/dart/api/v1
+      INDRA_WM_SERVICE_DB: postgresql://postgres:${POSTGRES_PASSWORD:-mysecretpassword}@indra-db:5432
+      LOCAL_DEPLOYMENT: 'true'
+    hostname: indra
+    image: indralab/indra_world
+    networks:
+    - dart
     ports:
-      - 9092:9092
+    - 9444:8000
+    volumes:
+    - ./data/indra:/data
+  indra-db:
+    container_name: indra-db
+    environment:
+      PGDATA: /var/lib/postgresql/pgdata
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mysecretpassword}
+    hostname: indra-db
+    image: indralab/indra_world_db
+    networks:
+    - dart
+  kafka-broker-1:
+    container_name: kafka-broker-1
     environment:
       KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER://kafka-broker-1:19092, LISTENER_LOCALHOST://localhost:9092
       KAFKA_BROKER_ID: 1
       KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER:PLAINTEXT, LISTENER_LOCALHOST:PLAINTEXT
-      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper-1:2181"
-      KAFKA_NUM_PARTITIONS: 3
-      KAFKA_REPLICA_FETCH_MAX_BYTES: 15000000
+      KAFKA_LOG4J_LOGGERS: kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO
       KAFKA_MESSAGE_MAX_BYTES: 15000000
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 15000000
       KAFKA_SOCKET_REQUEST_MAX_BYTES: 110000000
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:2181
       READERS: eidos
       TOPIC: dart.cdr.streaming.updates
+    hostname: kafka-broker-1
+    image: twosixlabsdart/confluent-kafka:2.0.7
+    networks:
+    - dart
+    ports:
+    - 9092:9092
+    restart: unless-stopped
     volumes:
-      - ./data/kafka-broker-1:/var/lib/kafka/data
-    networks:
-      - dart
-
-  topic-provisioner:
-    image: twosixlabsdart/topic-provisioner:latest
+    - ./data/kafka-broker-1:/var/lib/kafka/data
+  ladle:
+    container_name: ladle
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
-    healthcheck:
-      test: [ "CMD", "cat", "/opt/app/interstellar/.success" ]
-      interval: 1m30s
-      timeout: 10s
-      retries: 5
-    depends_on:
-      - kafka-broker-1
-    networks:
-      - dart
-
-  document-processing-pipeline:
-    image: twosixlabsdart/dart-document-ingestion:latest
-    container_name: document-processing-pipeline
-    hostname: document-processing-pipeline
-    environment:
-      PROGRAM_ARGS: "--primary-ds arangodb --sql-ds postgresql"
-      POLL_SIZE: 200
-      ARANGODB_HOST: dart-arangodb
-      ARANGODB_PORT: 8529
-      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
-      STREAM_ANNOTATION_UPDATES: "false"
-      QNTFY_NER_HOST: qntfy-ner-annotator
-      QNTFY_EVENTS_HOST: qntfy-events-annotator
-      QNTFY_CATEGORIES_HOST: qntfy-categories-annotator
-      QNTFY_KEY_SENTENCE_HOST: qntfy-key-sentence-annotator
-      SEARCH_HOST: dart-es-master
-      SEARCH_PORT: 9200
+      MICRONAUT_SERVER_MAX-REQUEST-SIZE: 504857600
+      MICRONAUT_SERVER_MULTIPART_MAX-FILE-SIZE: 504857600
+      PRODUCER_INTERFACE: kafka
       SQL_DB_ENGINE: postgresql
       SQL_DB_HOST: dart-postgres
-      SQL_DB_PORT: 5432
-      SQL_DB_USER: dart
-      SQL_DB_PASSWORD: dart_pass
       SQL_DB_NAME: dart_db
-    restart: unless-stopped
-    depends_on:
-      - kafka-broker-1
-      - topic-provisioner
+      SQL_DB_PASSWORD: dart_pass
+      SQL_DB_PORT: 5432
+      SQL_DB_TABLE: sams_progress
+      SQL_DB_USER: dart
+    hostname: ladle
+    image: twosixlabsdart/ladle:latest
     networks:
-      - dart
-
-  corpex:
-    image: twosixlabsdart/corpex:latest
+    - dart
     restart: unless-stopped
-    container_name: corpex
-    hostname: corpex
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.corpex-service.loadbalancer.server.port=8088"
-      - "traefik.http.routers.corpex.priority=100"
-      - "traefik.http.routers.corpex.rule=PathPrefix(`/dart/api/v1/corpex`)"
+  ontology-registry:
+    container_name: ontology-registry
     environment:
-      DART_AUTH_BYPASS: "true"
-      ELASTICSEARCH_HOST: dart-es-master
-      ELASTICSEARCH_PORT: 9200
-    networks:
-      - dart
-
-  cdr-retrieval:
-    image: twosixlabsdart/cdr-retrieval:latest
-    restart: unless-stopped
-    hostname: cdr-retrieval
-    container_name: cdr-retrieval
-    environment:
-      DART_AUTH_BYPASS: "true"
       ARANGODB_HOST: dart-arangodb
-      PERSISTENCE_DIR: /opt/app/data/completed
+      DART_AUTH_BYPASS: 'true'
+      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
+      ONTOLOGY_REGISTRY_PORT: 8084
+      POSTGRES_DATABASE: dart_db
+      POSTGRES_HOST: dart-postgres
+      POSTGRES_PASSWORD: dart_pass
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: dart
+    hostname: ontology-registry
+    image: twosixlabsdart/ontology-registry:3.0.19
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.cdrs-service.loadbalancer.server.port=8090"
-      - "traefik.http.routers.cdr-retrieval.rule=PathPrefix(`/dart/api/v1/cdrs`)"
-      - "traefik.http.routers.cdr-retrieval.priority=${CDR_RETRIEVAL_PRIORITY:-100}"
-    volumes:
-      - ./data/forklift/completed:/opt/app/data/completed
+    - autoheal=true
+    - traefik.enable=true
+    - traefik.http.services.ontology-registry.loadbalancer.server.port=8084
+    - traefik.http.routers.ontology-registry.rule=PathPrefix(`/dart/api/v1/ontologies`)
+    - traefik.http.routers.ontology-registry.priority=${ONTOLOGY_REGISTRY_PRIORITY:-100}
     networks:
-      - dart
-
-  readers-output:
-    image: twosixlabsdart/reader-output:latest
+    - dart
     restart: unless-stopped
-    hostname: readers-output
-    container_name: readers-output
+  qntfy-categories-annotator:
+    container_name: qntfy-categories-annotator
+    environment:
+      ANALYTIC_PORT: 45002
+      MAX_DOCUMENT_LENGTH: 2000000
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/dart/api/v1/readers/health" ]
       interval: 10s
       start_period: 30s
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:45002/api/v1/health
+    hostname: qntfy-categories-annotator
+    image: twosixlabsdart/qntfy-categories:2.0.4
+    labels:
+    - autoheal=true
+    networks:
+    - dart
+    restart: unless-stopped
+  qntfy-events-annotator:
+    container_name: qntfy-events-annotator
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
-      NOTIFICATION_REST_URLS: "http://indra:8000/dart/notify"
-      POSTGRES_HOST: dart-postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: dart
-      POSTGRES_PASSWORD: dart_pass
-      POSTGRES_DATABASE: dart_db
+      ANALYTIC_PORT: 45001
+      MAX_DOCUMENT_LENGTH: 2000000
+    healthcheck:
+      interval: 10s
+      start_period: 30s
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:45001/api/v1/health
+    hostname: qntfy-events-annotator
+    image: twosixlabsdart/qntfy-events:latest
+    labels:
+    - autoheal=true
+    networks:
+    - dart
+    restart: unless-stopped
+  qntfy-key-sentence-annotator:
+    container_name: qntfy-key-sentence-annotator
+    environment:
+      ANALYTIC_PORT: 45008
+      MAX_DOCUMENT_LENGTH: 2000000
+    healthcheck:
+      interval: 30s
+      start_period: 30s
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:45008/api/v1/health
+      timeout: 150s
+    hostname: qntfy-key-sentence-annotator
+    image: twosixlabsdart/qntfy-key-sentence:2.0.6
+    labels:
+    - autoheal=true
+    networks:
+    - dart
+    restart: unless-stopped
+  qntfy-ner-annotator:
+    container_name: qntfy-ner-annotator
+    environment:
+      ANALYTIC_PORT: 45000
+      MAX_DOCUMENT_LENGTH: 2000000
+    healthcheck:
+      interval: 10s
+      start_period: 30s
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:45000/api/v1/health
+    hostname: qntfy-ner-annotator
+    image: twosixlabsdart/qntfy-ner:2.0.8
+    labels:
+    - autoheal=true
+    networks:
+    - dart
+    restart: unless-stopped
+  readers-output:
+    container_name: readers-output
+    environment:
       ARANGODB_HOST: dart-arangodb
+      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
+      NOTIFICATION_REST_URLS: http://indra:8000/dart/notify
       PERSISTENCE_MODE: local
-    labels:
-      - "autoheal=true"
-      - "traefik.enable=true"
-      - "traefik.http.services.readers-service.loadbalancer.server.port=8080"
-      - "traefik.http.routers.readers-output.rule=PathPrefix(`/dart/api/v1/readers`)"
-      - "traefik.http.routers.readers-output.priority=${READERS_OUTPUT_PRIORITY:-100}"
-    volumes:
-      - ./data/readers-output:/opt/app/data/
-    networks:
-      - dart
-
-  forklift:
-    image: twosixlabsdart/forklift:latest
-    restart: unless-stopped
-    container_name: forklift
-    environment:
-      PROGRAM_ARGS: "--env docker"
-      DART_AUTH_BYPASS: "true"
-      FORKLIFT_HTTP_PORT: "8091"
-      JAVA_OPTS: "-Xms4g -Xmx4g"
-      OPERATIONS_DB_HOST: dart-postgres
-      OPERATIONS_DB_PASSWORD: dart_pass
-      OPERATIONS_DB_PORT: 5432
-      OPERATIONS_DB_TABLE: pipeline_status
-      OPERATIONS_DB_USER: dart
-      OPERATIONS_DB_NAME: dart_db
-      CORPEX_HOST: corpex
-      CORPEX_PORT: 8088
-      DART_NUM_ANNOTATORS: 4
-      CORS_ALLOWED_ORIGINS: ""
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.forklift-service.loadbalancer.server.port=8091"
-      - "traefik.http.routers.forklift.rule=PathPrefix(`/dart/api/v1/forklift`) || PathPrefix(`/dart/api/v1/status`)"
-      - "traefik.http.routers.forklift.priority=100"
-    volumes:
-      - ./data/forklift/inbound:/opt/app/data
-    networks:
-      - dart
-
-  dart-ui:
-    image: twosixlabsdart/dart-ui:latest
-    restart: unless-stopped
-    container_name: dart-ui
-    hostname: dart-ui
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.ui-service.loadbalancer.server.port=8080"
-      - "traefik.http.routers.dart-ui.rule=Host(`${PROXY_HOSTNAME:-localhost}`)"
-      - "traefik.http.routers.dart-ui.priority=90"
-    environment:
-      DART_UI_ENV: default
-      SEARCH_URL: http://${PROXY_HOSTNAME:-localhost}
-      RAW_DOC_URL: http://${PROXY_HOSTNAME:-localhost}/dart/api/v1/cdrs/raw
-      PROCUREMENT_URL: http://${PROXY_HOSTNAME:-localhost}
-      DART_AUTH_BYPASS: "true"
-      CLUSTERING_TEST_MODE: "false"
-      CLUSTERING_HOST: concepts-api
-      CLUSTERING_PORT: 8080
-      CLUSTERING_SCHEME: http
-      ARANGODB_HOST: dart-arangodb
-      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
+      POSTGRES_DATABASE: dart_db
       POSTGRES_HOST: dart-postgres
+      POSTGRES_PASSWORD: dart_pass
       POSTGRES_PORT: 5432
       POSTGRES_USER: dart
-      POSTGRES_PASSWORD: dart_pass
-      POSTGRES_DATABASE: dart_db
+    healthcheck:
+      interval: 10s
+      start_period: 30s
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8080/dart/api/v1/readers/health
+    hostname: readers-output
+    image: twosixlabsdart/reader-output:3.4
+    labels:
+    - autoheal=true
+    - traefik.enable=true
+    - traefik.http.services.readers-service.loadbalancer.server.port=8080
+    - traefik.http.routers.readers-output.rule=PathPrefix(`/dart/api/v1/readers`)
+    - traefik.http.routers.readers-output.priority=${READERS_OUTPUT_PRIORITY:-100}
     networks:
-      - dart
-
+    - dart
+    restart: unless-stopped
+    volumes:
+    - ./data/readers-output:/opt/app/data/
+  topic-provisioner:
+    depends_on:
+    - kafka-broker-1
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
+    healthcheck:
+      interval: 1m30s
+      retries: 5
+      test:
+      - CMD
+      - cat
+      - /opt/app/interstellar/.success
+      timeout: 10s
+    image: twosixlabsdart/topic-provisioner:2.0.8
+    networks:
+    - dart
+  traefik:
+    command:
+    - --log.level=DEBUG
+    - --providers.docker=true
+    - --api.insecure=true
+    - --providers.docker.exposedbydefault=false
+    - --entrypoints.web.address=:80
+    container_name: traefik
+    hostname: traefik
+    image: traefik:2.6
+    networks:
+    - dart
+    ports:
+    - 80:80
+    restart: unless-stopped
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ./data/letsencrypt:/letsencrypt
   transporter:
     container_name: transporter
     environment:
@@ -355,250 +578,24 @@ services:
     labels:
       autoheal: true
     networks:
-      - dart
+    - dart
     restart: unless-stopped
     volumes:
-      - ./data/forklift/inbound:/opt/app/data/inbound
-      - ./data/forklift/completed:/opt/app/data/completed
-
-  concepts-api:
-    image: twosixlabsdart/concepts-api:latest
-    hostname: concepts-api
-    container_name: concepts-api
-    restart: always
+    - ./data/forklift/inbound:/opt/app/data/inbound
+    - ./data/forklift/completed:/opt/app/data/completed
+  zookeeper-1:
+    container_name: zookeeper-1
     environment:
-      - DISCOVERY_ENABLED=false
-      - CLUSTERING_SERVER_ENABLED=true
-      - CLUSTERING_HOST=http://hume-oiad
-      - CLUSTERING_PORT=5061
-      - POSTGRES_HOST=dart-postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=dart
-      - POSTGRES_PASSWORD=dart_pass
-      - POSTGRES_DATABASE=dart_db
-      - ARANGODB_HOST=dart-arangodb
-      - ARANGODB_PORT=8529
-    labels:
-      - "autoheal=true"
-      - "traefik.enable=true"
-      - "traefik.http.services.concepts-service.loadbalancer.server.port=8080"
-      - "traefik.http.routers.concepts-api.rule=PathPrefix(`/dart/api/v1/cluster`)"
-      - "traefik.http.routers.concepts-api.priority=${CONCEPTS_API_PRIORITY:-100}"
+      ZOO_MAX_CLIENT_CNXNS: 100000
+      ZOO_MY_ID: 1
+      ZOO_PORT: 2181
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888
+    hostname: zookeeper-1
+    image: zookeeper:3.4.14
     networks:
-      - dart
-
-  ontology-registry:
-    image: twosixlabsdart/ontology-registry:latest
+    - dart
     restart: unless-stopped
-    container_name: ontology-registry
-    hostname: ontology-registry
-    environment:
-      ONTOLOGY_REGISTRY_PORT: 8084
-      DART_AUTH_BYPASS: "true"
-      POSTGRES_HOST: dart-postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: dart
-      POSTGRES_PASSWORD: dart_pass
-      POSTGRES_DATABASE: dart_db
-      ARANGODB_HOST: dart-arangodb
-      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:19092
-    labels:
-      - "autoheal=true"
-      - "traefik.enable=true"
-      - "traefik.http.services.ontology-registry.loadbalancer.server.port=8084"
-      - "traefik.http.routers.ontology-registry.rule=PathPrefix(`/dart/api/v1/ontologies`)"
-      - "traefik.http.routers.ontology-registry.priority=${ONTOLOGY_REGISTRY_PRIORITY:-100}"
-    networks:
-      - dart
-
-  dart-tenants:
-    image: twosixlabsdart/dart-tenants:latest
-    restart: unless-stopped
-    container_name: dart-tenants
-    hostname: dart-tenants
-    labels:
-      - "autoheal=true"
-      - "traefik.enable=true"
-      - "traefik.http.services.tenants-service.loadbalancer.server.port=8080"
-      - "traefik.http.routers.dart-tenants.rule=PathPrefix(`/dart/api/v1/tenants`)"
-      - "traefik.http.routers.dart-tenants.priority=${DART_TENANTS_PRIORITY:-100}"
-    environment:
-      DART_AUTH_BYPASS: "true"
-      ARANGODB_HOST: dart-arangodb
-      ELASTICSEARCH_HOST: dart-es-master
-      INDEX_2: none
-    networks:
-      - dart
-
-  traefik:
-    image: traefik:2.6
-    container_name: traefik
-    hostname: traefik
-    restart: unless-stopped
-    command:
-      - "--log.level=DEBUG"
-      - "--providers.docker=true"
-      - "--api.insecure=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-    networks:
-      - dart
-    ports:
-      - "80:80"
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./data/letsencrypt:/letsencrypt"
-
-  qntfy-key-sentence-annotator:
-    image: twosixlabsdart/qntfy-key-sentence:latest
-    container_name: qntfy-key-sentence-annotator
-    hostname: qntfy-key-sentence-annotator
-    restart: unless-stopped
-    labels:
-      - "autoheal=true"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:45008/api/v1/health" ]
-      interval: 30s
-      timeout: 150s
-      start_period: 30s
-    environment:
-      MAX_DOCUMENT_LENGTH: 2000000
-      ANALYTIC_PORT: 45008
-    networks:
-      - dart
-
-  qntfy-ner-annotator:
-    image: twosixlabsdart/qntfy-ner:latest
-    container_name: qntfy-ner-annotator
-    hostname: qntfy-ner-annotator
-    restart: unless-stopped
-    labels:
-      - "autoheal=true"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:45000/api/v1/health" ]
-      interval: 10s
-      start_period: 30s
-    environment:
-      MAX_DOCUMENT_LENGTH: 2000000
-      ANALYTIC_PORT: 45000
-    networks:
-      - dart
-
-  qntfy-events-annotator:
-    image: twosixlabsdart/qntfy-events:latest
-    hostname: qntfy-events-annotator
-    container_name: qntfy-events-annotator
-    restart: unless-stopped
-    labels:
-      - "autoheal=true"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:45001/api/v1/health" ]
-      interval: 10s
-      start_period: 30s
-    environment:
-      MAX_DOCUMENT_LENGTH: 2000000
-      ANALYTIC_PORT: 45001
-    networks:
-      - dart
-
-  qntfy-categories-annotator:
-    image: twosixlabsdart/qntfy-categories:latest
-    container_name: qntfy-categories-annotator
-    hostname: qntfy-categories-annotator
-    restart: unless-stopped
-    labels:
-      - "autoheal=true"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:45002/api/v1/health" ]
-      interval: 10s
-      start_period: 30s
-    environment:
-      MAX_DOCUMENT_LENGTH: 2000000
-      ANALYTIC_PORT: 45002
-    networks:
-      - dart
-
-  eidos:
-    image: clulab/eidos-dart:latest
-    container_name: eidos
-    hostname: eidos
-    environment:
-      EIDOS_MEMORY: -Xmx20g
-      REST_CONSUMER_DOCUMENT_SERVICE: http://cdr-retrieval:8090/dart/api/v1/cdrs
-      REST_CONSUMER_ONTOLOGY_SERVICE: http://ontology-registry:8084/dart/api/v1/ontologies
-      REST_PRODUCER_SERVICE: http://readers-output:8080/dart/api/v1/readers/upload
-      KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka-broker-1:19092
-      NOTIFICATION_KAFKA_TOPIC: dart.reader.notifications
-      KAFKA_APP_TOPIC: dart.cdr.streaming.updates
-      KAFKA_CONSUMER_SECURITY_PROTOCOL: PLAINTEXT
-      EIDOS_BASE_DIR: ../corpora/corpus
-      EIDOS_VERSION: julyEmbed1
-      ONTOLOGY_VERSION: 2.3
-    restart: unless-stopped
-    labels:
-      - "autoheal=true"
-    volumes:
-      - ./data/eidos:/corpora/corpus
-    networks:
-      - dart
-
-  hume-reader:
-    image: twosixlabsdart/bbn-hume-reader:R2022_03_21
-    container_name: hume-reader
-    hostname: hume-reader
-    restart: unless-stopped
-    labels:
-      - "autoheal=true"
-    networks:
-      - dart
-
-  hume-oiad:
-    image: twosixlabsdart/bbn-hume-oiad:R2022_03_21
-    container_name: hume-oiad
-    hostname: hume-oiad
-    restart: unless-stopped
-    labels:
-      - "autoheal=true"
-    networks:
-      - dart
-
-  indra:
-    image: indralab/indra_world
-    container_name: indra
-    hostname: indra
-    ports:
-      - "9444:8000"
-    environment:
-      INDRA_WM_SERVICE_DB: postgresql://postgres:${POSTGRES_PASSWORD:-mysecretpassword}@indra-db:5432
-      DART_WM_URL: http://traefik/dart/api/v1
-      LOCAL_DEPLOYMENT: "true"
-    entrypoint: gunicorn -w 1 -b :8000 -t 600 indra_world.service.app:app
-    volumes:
-      - ./data/indra:/data
-    networks:
-      - dart
-
-  indra-db:
-    image: indralab/indra_world_db
-    container_name: indra-db
-    hostname: indra-db
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mysecretpassword}
-      PGDATA: /var/lib/postgresql/pgdata
-    networks:
-      - dart
-
-  autoheal:
-    image: willfarrell/autoheal
-    container_name: autoheal
-    hostname: autoheal
-    restart: unless-stopped
-    environment:
-      - AUTOHEAL_CONTAINER_LABEL=all
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - dart
-
-networks:
-  dart:
+    - ./data/zookeeper-1/data:/data
+    - ./data/zookeeper-1/datalog:/datalog
+version: '3.7'
