@@ -17,3 +17,4 @@ jobs:
         uses: twosixlabs-dart/dart-tag-release@v3.0.38
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          release_version: ${{ format('1.0.{0}', github.run_number) }}
