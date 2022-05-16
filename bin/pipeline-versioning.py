@@ -33,7 +33,7 @@ def generate_versioned_services(services: {}, tags_regex: str, github_client: Gi
     for service_name, service_config in services.items():
         image, *tag = service_config['image'].split(':')
         if tag and tag[0] == 'latest':
-            latest_version = get_latest_version(github_client.get_image_tags(image, _tags_regex=tags_regex))
+            latest_version = get_latest_tag(github_client.get_image_tags(image, _tags_regex=tags_regex))
             if latest_version:
                 versioned_image = f'{image}:{latest_version}'
                 print(f'versioned: {versioned_image}')
@@ -46,7 +46,7 @@ def generate_versioned_services(services: {}, tags_regex: str, github_client: Gi
     return versioned_services
 
 
-def get_latest_version(image_tags: []) -> str:
+def get_latest_tag(image_tags: []) -> str:
     if not image_tags:
         return 'latest'
     else:
@@ -64,7 +64,7 @@ def process_compose_file(compose_file: str) -> {}:
         raise RuntimeError(f'Compose file not found: {compose_file}')
 
 
-def save_compose_file(compose_dict: {}, filename: str) -> None:
+def save_compose_file(compose_dict: {}, filename: Path) -> None:
     with open(filename, 'w') as _file:
         yaml.dump(compose_dict, _file, default_flow_style=False)
 
