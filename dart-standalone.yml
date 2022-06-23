@@ -591,13 +591,14 @@ services:
   causemos-elasticsearch:
     image: uncharted/wm-causemos-elastic:latest
     healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:9203"]
+        test: ["CMD", "curl", "-f", "http://causemos-elasticsearch:9200"]
         interval: 30s
         timeout: 10s
         retries: 5
     environment:
       - xpack.security.enabled=false
       - "discovery.type=single-node"
+      - cluster.routing.allocation.disk.threshold_enabled=false
     networks:
       - dart
     ports:
@@ -616,14 +617,12 @@ services:
     depends_on:
       causemos-elasticsearch:
         condition: service_healthy
-    #secrets:
-    #  - source: CAUSEMOS_ENV_FILE
-    #    target: /server/.env
     environment:
       TD_DATA_URL: http://causemos-elasticsearch:9200
       DART_SERVICE_URL: http://traefik/dart/api/v1
       DART_DOCUMENT_RETRIEVAL_URL: http://traefik/dart/api/v1
       INDRA_URL: http://indra:8000
+      WM_GO_URL: UNUSED
     networks:
       - dart
     ports:
@@ -643,9 +642,6 @@ services:
       SOURCE_ES: http://causemos-elasticsearch:9200
       TARGET_ES: http://causemos-elasticsearch:9200
       INDRA_HOST: http://indra:8000
-    #secrets:
-    #  - source: ANANSI_ENV_FILE
-    #    target: /web/.env
     networks:
       - dart
     ports:
