@@ -588,6 +588,67 @@ services:
     networks:
       - dart
 
+  causemos-elasticsearch:
+    image: uncharted/wm-causemos-elastic:latest
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://causemos-elasticsearch:9200"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+    environment:
+      - xpack.security.enabled=false
+      - "discovery.type=single-node"
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    networks:
+      - dart
+    ports:
+      - 9203:9200
+
+  causemos:
+    image: uncharted/wm-causemos:latest
+    deploy:
+      placement:
+        constraints: [node.role != manager]
+      replicas: 1
+      resources:
+        limits:
+          memory: 1048M
+          cpus: '2'
+    depends_on:
+      causemos-elasticsearch:
+        condition: service_healthy
+    environment:
+      TD_DATA_URL: http://causemos-elasticsearch:9200
+      DART_SERVICE_URL: http://traefik/dart/api/v1
+      DART_DOCUMENT_RETRIEVAL_URL: http://traefik/dart/api/v1
+      INDRA_URL: http://indra:8000
+      WM_GO_URL: UNUSED
+    networks:
+      - dart
+    ports:
+      - "3003:3000"
+
+  anansi:
+    image: uncharted/wm-causemos-anansi:latest
+    deploy:
+      placement:
+        constraints: [node.role != manager]
+      replicas: 1
+      resources:
+        limits:
+          memory: 1048M
+          cpus: '2'
+    environment:
+      SOURCE_ES: http://causemos-elasticsearch:9200
+      TARGET_ES: http://causemos-elasticsearch:9200
+      INDRA_HOST: http://indra:8000
+    networks:
+      - dart
+    ports:
+      - "6000:6000"
+    volumes:
+      - ./data:/data
+
   autoheal:
     image: willfarrell/autoheal
     container_name: autoheal
