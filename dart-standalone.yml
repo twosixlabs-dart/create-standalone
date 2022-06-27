@@ -599,6 +599,7 @@ services:
       - xpack.security.enabled=false
       - "discovery.type=single-node"
       - cluster.routing.allocation.disk.threshold_enabled=false
+    restart: unless-stopped
     networks:
       - dart
     ports:
@@ -606,6 +607,7 @@ services:
 
   causemos:
     image: uncharted/wm-causemos:latest
+    restart: unless-stopped
     deploy:
       placement:
         constraints: [node.role != manager]
@@ -615,8 +617,7 @@ services:
           memory: 1048M
           cpus: '2'
     depends_on:
-      causemos-elasticsearch:
-        condition: service_healthy
+      - causemos-elasticsearch
     environment:
       TD_DATA_URL: http://causemos-elasticsearch:9200
       DART_SERVICE_URL: http://traefik/dart/api/v1
@@ -630,6 +631,7 @@ services:
 
   anansi:
     image: uncharted/wm-causemos-anansi:latest
+    restart: unless-stopped
     deploy:
       placement:
         constraints: [node.role != manager]
