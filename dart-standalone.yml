@@ -642,6 +642,9 @@ services:
       SOURCE_ES: http://causemos-elasticsearch:9200
       TARGET_ES: http://causemos-elasticsearch:9200
       INDRA_HOST: http://indra:8000
+      WATCH_FOLDER: /data/indra
+      WATCH_INTERVAL: 60000
+      DART_CDR_URL: http://traefik/dart/api/v1/cdrs/archive 
     networks:
       - dart
     ports:
