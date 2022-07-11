@@ -1,1 +1,1 @@
-# dart-in-the-box
+# World Modelers CREATE standalone demo
